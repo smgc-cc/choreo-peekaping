@@ -1,45 +1,16 @@
-# Dockerfile for Choreo Platform
-# Constraints: USER 10014, only /tmp is writable, external Supabase PostgreSQL
+# Dockerfile for Choreo - based on official bundle image binaries
+# Extracts pre-built binaries, no rebuild needed
 
-ARG PEEKAPING_VERSION=main
+# Stage 1: Extract binaries from official bundle
+FROM 0xfurai/peekaping-bundle-postgres:latest AS source
 
-# Stage 1: Build Go server binaries
-FROM golang:1.24.3-alpine AS go-builder
-
-ARG PEEKAPING_VERSION
-RUN apk add --no-cache git
-
-WORKDIR /src
-RUN git clone --depth 1 --branch ${PEEKAPING_VERSION} https://github.com/0xfurai/peekaping.git .
-
-WORKDIR /src/apps/server
-RUN go mod download
-RUN CGO_ENABLED=0 GOFLAGS="-trimpath" go build -o api -ldflags="-s -w" ./cmd/api
-RUN CGO_ENABLED=0 GOFLAGS="-trimpath" go build -o producer -ldflags="-s -w" ./cmd/producer
-RUN CGO_ENABLED=0 GOFLAGS="-trimpath" go build -o worker -ldflags="-s -w" ./cmd/worker
-RUN CGO_ENABLED=0 GOFLAGS="-trimpath" go build -o ingester -ldflags="-s -w" ./cmd/ingester
-RUN CGO_ENABLED=0 go build -o bun -ldflags="-s -w" ./cmd/bun
-
-# Stage 2: Build React web app
-FROM node:22-alpine AS web-builder
-
-ARG PEEKAPING_VERSION
-RUN apk add --no-cache git
-
-WORKDIR /src
-RUN git clone --depth 1 --branch ${PEEKAPING_VERSION} https://github.com/0xfurai/peekaping.git .
-
-RUN npm install -g pnpm && pnpm install --filter=web
-WORKDIR /src/apps/web
-RUN pnpm run build
-
-# Stage 3: Final runtime image for Choreo
+# Stage 2: Final lightweight image for Choreo
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Install minimal dependencies (nginx instead of caddy)
+# Install minimal dependencies (no PostgreSQL, no Caddy)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     netcat-openbsd \
@@ -53,18 +24,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /app/server /app/web /var/log/nginx /var/lib/nginx/body \
     && chown -R 10014:10014 /var/log/nginx /var/lib/nginx
 
-# Copy built Go binaries
-COPY --from=go-builder /src/apps/server/api /app/server/
-COPY --from=go-builder /src/apps/server/producer /app/server/
-COPY --from=go-builder /src/apps/server/worker /app/server/
-COPY --from=go-builder /src/apps/server/ingester /app/server/
-COPY --from=go-builder /src/apps/server/bun /app/server/
-COPY --from=go-builder /src/apps/server/cmd/bun/migrations /app/server/cmd/bun/migrations
-COPY --from=go-builder /src/apps/server/internal/config /app/server/internal/config
-COPY --from=go-builder /src/apps/server/scripts/run-migrations.sh /app/server/run-migrations.sh
+# Copy pre-built binaries from official image
+COPY --from=source /app/server/api /app/server/
+COPY --from=source /app/server/producer /app/server/
+COPY --from=source /app/server/worker /app/server/
+COPY --from=source /app/server/ingester /app/server/
+COPY --from=source /app/server/bun /app/server/
+COPY --from=source /app/server/cmd/bun/migrations /app/server/cmd/bun/migrations
+COPY --from=source /app/server/internal/config /app/server/internal/config
+COPY --from=source /app/server/run-migrations.sh /app/server/run-migrations.sh
 
-# Copy built web assets
-COPY --from=web-builder /src/apps/web/dist /app/web
+# Copy web assets from official image
+COPY --from=source /app/web /app/web
 
 # Copy Choreo config files
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -79,7 +50,7 @@ RUN chmod +x /app/startup.sh /app/server/run-migrations.sh \
     /app/server/api /app/server/producer /app/server/worker \
     /app/server/ingester /app/server/bun
 
-# Prepare /tmp directories and nginx runtime dirs
+# Prepare /tmp directories
 RUN mkdir -p /tmp/supervisor /tmp/redis /tmp/app /tmp/nginx \
     && chmod -R 777 /tmp \
     && ln -sf /tmp/nginx /var/lib/nginx/tmp
