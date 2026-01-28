@@ -3,7 +3,7 @@ set -e
 
 echo "Starting Peekaping on Choreo..."
 
-mkdir -p /tmp/supervisor /tmp/redis /tmp/caddy/data /tmp/app
+mkdir -p /tmp/supervisor /tmp/redis /tmp/app /tmp/nginx
 
 # Validate required env vars
 if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
