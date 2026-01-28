@@ -34,7 +34,10 @@ RUN npm install -g pnpm && pnpm install --filter=web
 WORKDIR /src/apps/web
 RUN pnpm run build
 
-# Stage 3: Final runtime image for Choreo
+# Stage 3: Get Caddy binary from official image
+FROM caddy:2.8-alpine AS caddy
+
+# Stage 4: Final runtime image for Choreo
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -49,12 +52,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     redis-server \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Caddy
-RUN curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg \
-    && curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends caddy \
-    && rm -rf /var/lib/apt/lists/*
+# Copy Caddy from official image
+COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
 
 # Create app directories
 RUN mkdir -p /app/server /app/web
@@ -180,7 +179,7 @@ priority=230
 startsecs=10
 
 [program:caddy]
-command=caddy run --config /etc/caddy/Caddyfile
+command=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile
 autostart=true
 autorestart=true
 stdout_logfile=/dev/stdout
