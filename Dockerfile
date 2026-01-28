@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
 
 # Create app directories
-RUN mkdir -p /app/server /app/web
+RUN mkdir -p /app/server /app/web /etc/caddy
 
 # Copy built Go binaries
 COPY --from=go-builder /src/apps/server/api /app/server/
