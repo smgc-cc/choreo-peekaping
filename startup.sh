@@ -4,7 +4,7 @@ set -e
 echo "Starting Peekaping on Choreo..."
 
 # Create tmp directories
-mkdir -p /tmp/supervisor /tmp/redis /tmp/app
+mkdir -p /tmp/supervisor /tmp/redis /tmp/app /tmp/caddy/data
 
 # Validate required env vars
 if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
