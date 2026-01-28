@@ -3,7 +3,8 @@ set -e
 
 echo "Starting Peekaping on Choreo..."
 
-mkdir -p /tmp/supervisor /tmp/redis /tmp/app /tmp/nginx
+# Create tmp directories
+mkdir -p /tmp/supervisor /tmp/redis /tmp/app
 
 # Validate required env vars
 if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
@@ -11,14 +12,22 @@ if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
     exit 1
 fi
 
-# Set defaults
+# Set database config for external PostgreSQL (Supabase)
 export DB_TYPE=${DB_TYPE:-postgres}
+export DB_HOST=${DB_HOST}
 export DB_PORT=${DB_PORT:-5432}
 export DB_NAME=${DB_NAME:-postgres}
+export DB_USER=${DB_USER}
+export DB_PASS=${DB_PASS}
 export DB_SSL_MODE=${DB_SSL_MODE:-require}
+
+# Server config
 export SERVER_PORT=${SERVER_PORT:-8034}
 export CLIENT_URL=${CLIENT_URL:-}
 export MODE=${MODE:-prod}
+export TZ=${TZ:-UTC}
+
+# Redis config (local)
 export REDIS_HOST=127.0.0.1
 export REDIS_PORT=6379
 
@@ -33,13 +42,16 @@ while [ $timeout -gt 0 ]; do
         echo "Database reachable!"
         break
     fi
+    echo "Waiting for database... ($timeout)"
     timeout=$((timeout - 1))
     sleep 1
 done
 
 # Run migrations
+echo "Running database migrations..."
 cd /app/server
 ./run-migrations.sh || echo "Migration warning - continuing..."
 
 # Start supervisor
+echo "Starting services..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
