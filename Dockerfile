@@ -33,10 +33,7 @@ RUN npm install -g pnpm && pnpm install --filter=web
 WORKDIR /src/apps/web
 RUN pnpm run build
 
-# Stage 3: Get Caddy binary from official image
-FROM caddy:2.8-alpine AS caddy
-
-# Stage 4: Final runtime image for Choreo
+# Stage 3: Final runtime image for Choreo
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -52,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Caddy from official image
-COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
+COPY --from=caddy:alpine /usr/bin/caddy /usr/local/bin/caddy
 
 # Create directories
 RUN mkdir -p /app/server /app/web /etc/caddy
@@ -71,9 +68,9 @@ COPY --from=go-builder /src/apps/server/scripts/run-migrations.sh /app/server/ru
 COPY --from=web-builder /src/apps/web/dist /app/web
 
 # Copy Choreo config files
-COPY choreo/Caddyfile /etc/caddy/Caddyfile
-COPY choreo/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY choreo/startup.sh /app/startup.sh
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY startup.sh /app/startup.sh
 
 # Set permissions
 RUN chmod +x /app/startup.sh /app/server/run-migrations.sh \
