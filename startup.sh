@@ -1,10 +1,6 @@
 #!/bin/sh
 set -e
 
-# Komari agent env
-KOMARI_SERVER="${KOMARI_SERVER:-}"
-KOMARI_SECRET="${KOMARI_SECRET:-}"
-
 echo "Starting Peekaping on Choreo..."
 
 # Create tmp directories
