@@ -3,15 +3,16 @@
 
 FROM 0xfurai/peekaping-bundle-sqlite:latest
 
-# Fix CVE-2025-15467 (libssl3/openssl)
+# Fix Container (Trivy) Vulnerability Scan
 USER root
-RUN apt-get update && apt-get install -y --only-upgrade \
+RUN rm -f /etc/apt/sources.list.d/*caddy*.list \
+    && apt-get update \
+    && apt-get install -y --only-upgrade \
     libssl3 \
     openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories with proper ownership for user 10014
-# Added /tmp/app based on your previous config logic
 RUN mkdir -p /tmp/redis /tmp/supervisor /tmp/app /tmp/caddy \
     && chown -R 10014:10014 /app /tmp \
     && chmod -R 777 /tmp
