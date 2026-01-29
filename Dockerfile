@@ -8,6 +8,9 @@ RUN mkdir -p /tmp/redis /tmp/supervisor /tmp/app /tmp/caddy \
     && chown -R 10014:10014 /app /tmp \
     && chmod -R 777 /tmp
 
+# Copy komari-agent
+COPY --from=ghcr.io/komari-monitor/komari-agent:latest /app/komari-agent /app/komari-agent
+
 # Copy Choreo config files (overwrite originals)
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
