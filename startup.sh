@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+# Komari agent env
+KOMARI_SERVER="${KOMARI_SERVER:-}"
+KOMARI_SECRET="${KOMARI_SECRET:-}"
+
 echo "Starting Peekaping on Choreo..."
 
 # Create tmp directories
@@ -46,6 +50,14 @@ while [ $timeout -gt 0 ]; do
     timeout=$((timeout - 1))
     sleep 1
 done
+
+# Run komari-agent
+if [ -n "$KOMARI_SERVER" ] && [ -n "$KOMARI_SECRET" ]; then
+    echo "Running komari agent..."
+    /app/komari-agent -e "$KOMARI_SERVER" -t "$KOMARI_SECRET" --disable-auto-update >/dev/null 2>&1 &
+else
+    echo "komari-agent not configured, skip..."
+fi
 
 # Run migrations
 echo "Running database migrations..."
